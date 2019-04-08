@@ -21,6 +21,8 @@ import feign.Logger;
 /**
  * Allows an application to use a custom Feign {@link Logger}.
  *
+ * 允许应用程序使用自定义Feign {@link Logger}。
+ *
  * @author Venil Noronha
  */
 public interface FeignLoggerFactory {

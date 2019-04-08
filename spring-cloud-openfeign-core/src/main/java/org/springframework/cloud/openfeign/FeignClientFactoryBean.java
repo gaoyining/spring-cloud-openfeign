@@ -52,10 +52,12 @@ class FeignClientFactoryBean implements FactoryBean<Object>, InitializingBean,
 		ApplicationContextAware {
 	/***********************************
 	 * WARNING! Nothing in this class should be @Autowired. It causes NPEs because of some lifecycle race condition.
+	 * * 警告！ 本类中的任何内容都不应该是@Autowired。 由于某些生命周期竞争条件，它会导致NPEs。
 	 ***********************************/
 
 	private Class<?> type;
 
+	// serviceId
 	private String name;
 
 	private String url;
@@ -84,7 +86,9 @@ class FeignClientFactoryBean implements FactoryBean<Object>, InitializingBean,
 	}
 
 	protected Feign.Builder feign(FeignContext context) {
+		// 获得FeignLoggerFactory类型的实例
 		FeignLoggerFactory loggerFactory = get(context, FeignLoggerFactory.class);
+		// 获得logger，如果没用默认使用Slf4jLogger
 		Logger logger = loggerFactory.create(this.type);
 
 		// @formatter:off
@@ -135,6 +139,7 @@ class FeignClientFactoryBean implements FactoryBean<Object>, InitializingBean,
 		if (options != null) {
 			builder.options(options);
 		}
+		// 获取所有的RequestInterceptor
 		Map<String, RequestInterceptor> requestInterceptors = context.getInstances(
 				this.contextId, RequestInterceptor.class);
 		if (requestInterceptors != null) {
@@ -205,6 +210,7 @@ class FeignClientFactoryBean implements FactoryBean<Object>, InitializingBean,
 	}
 
 	protected <T> T get(FeignContext context, Class<T> type) {
+		// 获得子context实例
 		T instance = context.getInstance(this.contextId, type);
 		if (instance == null) {
 			throw new IllegalStateException("No bean found of type " + type + " for "
@@ -241,6 +247,7 @@ class FeignClientFactoryBean implements FactoryBean<Object>, InitializingBean,
 	 */
 	<T> T getTarget() {
 		FeignContext context = applicationContext.getBean(FeignContext.class);
+		// 构建Feign.Builder
 		Feign.Builder builder = feign(context);
 
 		if (!StringUtils.hasText(this.url)) {

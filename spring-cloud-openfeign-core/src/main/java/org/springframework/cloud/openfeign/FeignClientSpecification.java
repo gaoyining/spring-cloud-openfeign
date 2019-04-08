@@ -38,6 +38,7 @@ class FeignClientSpecification implements NamedContextFactory.Specification {
 		this.configuration = configuration;
 	}
 
+	@Override
 	public String getName() {
 		return name;
 	}
@@ -46,6 +47,7 @@ class FeignClientSpecification implements NamedContextFactory.Specification {
 		this.name = name;
 	}
 
+	@Override
 	public Class<?>[] getConfiguration() {
 		return configuration;
 	}

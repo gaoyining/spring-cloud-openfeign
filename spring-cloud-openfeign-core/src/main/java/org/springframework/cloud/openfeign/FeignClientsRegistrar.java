@@ -63,6 +63,8 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar,
 
 	// patterned after Spring Integration IntegrationComponentScanRegistrar
 	// and RibbonClientsConfigurationRegistgrar
+	// 在Spring Integration IntegrationComponentScanRegistrar之后构建
+	// 和RibbonClientsConfigurationRegistgrar
 
 	private ResourceLoader resourceLoader;
 
@@ -79,7 +81,10 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar,
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata metadata,
 			BeanDefinitionRegistry registry) {
+		// 注入默认的Configuration
 		registerDefaultConfiguration(metadata, registry);
+		// -----------关键方法--------------
+		// 注册feignClients
 		registerFeignClients(metadata, registry);
 	}
 
@@ -114,10 +119,13 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar,
 				FeignClient.class);
 		final Class<?>[] clients = attrs == null ? null
 				: (Class<?>[]) attrs.get("clients");
+		// clients为空
 		if (clients == null || clients.length == 0) {
 			scanner.addIncludeFilter(annotationTypeFilter);
+			// 获得所有的包路径
 			basePackages = getBasePackages(metadata);
 		}
+		// clients不为空
 		else {
 			final Set<String> clientClasses = new HashSet<>();
 			basePackages = new HashSet<>();
@@ -137,11 +145,13 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar,
 		}
 
 		for (String basePackage : basePackages) {
+			// 查找包路径下符合的BeanDefinition
 			Set<BeanDefinition> candidateComponents = scanner
 					.findCandidateComponents(basePackage);
 			for (BeanDefinition candidateComponent : candidateComponents) {
 				if (candidateComponent instanceof AnnotatedBeanDefinition) {
 					// verify annotated class is an interface
+					// 验证带注释的类是一个接口
 					AnnotatedBeanDefinition beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
 					AnnotationMetadata annotationMetadata = beanDefinition.getMetadata();
 					Assert.isTrue(annotationMetadata.isInterface(),
@@ -155,6 +165,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar,
 					registerClientConfiguration(registry, name,
 							attributes.get("configuration"));
 
+					// 注册一个BeanDefinition
 					registerFeignClient(registry, annotationMetadata, attributes);
 				}
 			}

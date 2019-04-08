@@ -107,11 +107,14 @@ public class SpringMvcContract extends Contract.BaseContract
 
 		List<AnnotatedParameterProcessor> processors;
 		if (!annotatedParameterProcessors.isEmpty()) {
+			// 如果指定了
 			processors = new ArrayList<>(annotatedParameterProcessors);
 		}
 		else {
+			// 没有指定使用默认的
 			processors = getDefaultAnnotatedArgumentsProcessors();
 		}
+		// 初始化注解参数执行器，processors 在springMvcContract实例化时注入，如果不不注入，则使用默认的
 		this.annotatedArgumentProcessors = toAnnotatedArgumentProcessorMap(processors);
 		this.conversionService = conversionService;
 		this.convertingExpanderFactory = new ConvertingExpanderFactory(conversionService);
@@ -122,13 +125,20 @@ public class SpringMvcContract extends Contract.BaseContract
 		this.resourceLoader = resourceLoader;
 	}
 
+	/**
+	 * 处理类上的注解
+	 * @param data
+	 * @param clz
+	 */
 	@Override
 	protected void processAnnotationOnClass(MethodMetadata data, Class<?> clz) {
 		if (clz.getInterfaces().length == 0) {
+			// 获取RequestMapping的注解信息，并设置MethodMetadata.template的数据
 			RequestMapping classAnnotation = findMergedAnnotation(clz,
 					RequestMapping.class);
 			if (classAnnotation != null) {
 				// Prepend path from class annotation if specified
+				// 如果指定，则从类注释预添加路径
 				if (classAnnotation.value().length > 0) {
 					String pathValue = emptyToNull(classAnnotation.value()[0]);
 					pathValue = resolve(pathValue);
@@ -144,23 +154,29 @@ public class SpringMvcContract extends Contract.BaseContract
 	@Override
 	public MethodMetadata parseAndValidateMetadata(Class<?> targetType, Method method) {
 		this.processedMethods.put(Feign.configKey(targetType, method), method);
+		// ------------- 关键方法 -----------------
+		// 调用父类方法
 		MethodMetadata md = super.parseAndValidateMetadata(targetType, method);
 
 		RequestMapping classAnnotation = findMergedAnnotation(targetType,
 				RequestMapping.class);
 		if (classAnnotation != null) {
 			// produces - use from class annotation only if method has not specified this
+			// produce  - 仅在方法未指定时才使用类注释
 			if (!md.template().headers().containsKey(ACCEPT)) {
 				parseProduces(md, method, classAnnotation);
 			}
 
 			// consumes -- use from class annotation only if method has not specified this
+			// consumes  - 仅当方法未指定时才使用类注释
 			if (!md.template().headers().containsKey(CONTENT_TYPE)) {
 				parseConsumes(md, method, classAnnotation);
 			}
 
 			// headers -- class annotation is inherited to methods, always write these if
 			// present
+			// headers  - 类注释继承到方法，总是写下这些
+			// 当下
 			parseHeaders(md, method, classAnnotation);
 		}
 		return md;
@@ -171,25 +187,32 @@ public class SpringMvcContract extends Contract.BaseContract
 			Annotation methodAnnotation, Method method) {
 		if (!RequestMapping.class.isInstance(methodAnnotation) && !methodAnnotation
 				.annotationType().isAnnotationPresent(RequestMapping.class)) {
+			// 方法上没有RequestMapping，或者没有RequestMapping的字注解，直接返回
 			return;
 		}
 
+		// 获得注解
 		RequestMapping methodMapping = findMergedAnnotation(method, RequestMapping.class);
+		// 处理http method
 		// HTTP Method
 		RequestMethod[] methods = methodMapping.method();
+		// 默认的RequestMethod是get
 		if (methods.length == 0) {
 			methods = new RequestMethod[] { RequestMethod.GET };
 		}
 		checkOne(method, methods, "method");
 		data.template().method(Request.HttpMethod.valueOf(methods[0].name()));
 
+		// 处理请求的路径
 		// path
 		checkAtMostOne(method, methodMapping.value(), "value");
 		if (methodMapping.value().length > 0) {
 			String pathValue = emptyToNull(methodMapping.value()[0]);
 			if (pathValue != null) {
+				// 映射path，看具体是什么，是否带rest参数之类的
 				pathValue = resolve(pathValue);
 				// Append path from @RequestMapping if value is present on method
+				// 如果方法上存在值，则从@RequestMapping追加路径
 				if (!pathValue.startsWith("/")
 						&& !data.template().path().endsWith("/")) {
 					pathValue = "/" + pathValue;
@@ -199,12 +222,15 @@ public class SpringMvcContract extends Contract.BaseContract
 		}
 
 		// produces
+		// 处理生产
 		parseProduces(data, method, methodMapping);
 
 		// consumes
+		// 处理消费
 		parseConsumes(data, method, methodMapping);
 
 		// headers
+		// 处理头
 		parseHeaders(data, method, methodMapping);
 
 		data.indexToExpander(new LinkedHashMap<Integer, Param.Expander>());
@@ -240,6 +266,7 @@ public class SpringMvcContract extends Contract.BaseContract
 		AnnotatedParameterProcessor.AnnotatedParameterContext context = new SimpleAnnotatedParameterContext(
 				data, paramIndex);
 		Method method = this.processedMethods.get(data.configKey());
+		// 遍历所有的注解
 		for (Annotation parameterAnnotation : annotations) {
 			AnnotatedParameterProcessor processor = this.annotatedArgumentProcessors
 					.get(parameterAnnotation.annotationType());
@@ -247,6 +274,8 @@ public class SpringMvcContract extends Contract.BaseContract
 				Annotation processParameterAnnotation;
 				// synthesize, handling @AliasFor, while falling back to parameter name on
 				// missing String #value():
+				// 合成，处理@AliasFor，同时回退到参数名称
+				// 缺少字符串#value（）：
 				processParameterAnnotation = synthesizeWithMethodParameterNameAsFallbackValue(
 						parameterAnnotation, method, paramIndex);
 				isHttpAnnotation |= processor.processArgument(context,
@@ -287,16 +316,6 @@ public class SpringMvcContract extends Contract.BaseContract
 		return typeDescriptor;
 	}
 
-	private void parseProduces(MethodMetadata md, Method method,
-			RequestMapping annotation) {
-		String[] serverProduces = annotation.produces();
-		String clientAccepts = serverProduces.length == 0 ? null
-				: emptyToNull(serverProduces[0]);
-		if (clientAccepts != null) {
-			md.template().header(ACCEPT, clientAccepts);
-		}
-	}
-
 	private void parseConsumes(MethodMetadata md, Method method,
 			RequestMapping annotation) {
 		String[] serverConsumes = annotation.consumes();
@@ -304,6 +323,16 @@ public class SpringMvcContract extends Contract.BaseContract
 				: emptyToNull(serverConsumes[0]);
 		if (clientProduces != null) {
 			md.template().header(CONTENT_TYPE, clientProduces);
+		}
+	}
+
+	private void parseProduces(MethodMetadata md, Method method,
+							   RequestMapping annotation) {
+		String[] serverProduces = annotation.produces();
+		String clientAccepts = serverProduces.length == 0 ? null
+				: emptyToNull(serverProduces[0]);
+		if (clientAccepts != null) {
+			md.template().header(ACCEPT, clientAccepts);
 		}
 	}
 
@@ -342,6 +371,13 @@ public class SpringMvcContract extends Contract.BaseContract
 		return annotatedArgumentResolvers;
 	}
 
+	/**
+	 * 使用方法参数名称作为Fallback值进行合成
+	 * @param parameterAnnotation
+	 * @param method
+	 * @param parameterIndex
+	 * @return
+	 */
 	private Annotation synthesizeWithMethodParameterNameAsFallbackValue(
 			Annotation parameterAnnotation, Method method, int parameterIndex) {
 		Map<String, Object> annotationAttributes = AnnotationUtils

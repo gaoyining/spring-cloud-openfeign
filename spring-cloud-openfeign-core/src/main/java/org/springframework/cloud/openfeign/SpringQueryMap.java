@@ -27,6 +27,8 @@ import java.lang.annotation.Target;
 /**
  * Spring MVC equivalent of OpenFeign's {@link feign.QueryMap} parameter annotation.
  *
+ * Spring MVC相当于OpenFeign的{@link feign.QueryMap}参数注释。
+ *
  * @author Aram Peres
  * @see feign.QueryMap
  * @see org.springframework.cloud.openfeign.annotation.QueryMapParameterProcessor
